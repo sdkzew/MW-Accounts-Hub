@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="en" data-mode="lol">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MORPH WRLD // Rift Vault</title>
+  </head>
+  <body>
+    <div class="launch-splash" id="launch-splash" role="status" aria-live="polite" aria-label="MORPH WRLD Rift Vault is loading">
+      <div class="launch-glow" aria-hidden="true"></div>
+      <div class="launch-lockup">
+        <div class="launch-emblem" aria-hidden="true">
+          <span class="launch-orbit"></span>
+          <span class="launch-orbit launch-orbit-inner"></span>
+          <img src="/icon.png" alt="" />
+        </div>
+        <div class="launch-brand">
+          <strong>MORPH WRLD</strong>
+          <span>RIFT VAULT</span>
+        </div>
+        <div class="launch-progress" aria-hidden="true"><span></span></div>
+        <p>SECURING YOUR VAULT</p>
+      </div>
+      <div class="launch-tagline" aria-hidden="true"><span></span><strong>BY GAMERS, FOR GAMERS</strong><span></span></div>
+    </div>
+
+    <div class="backdrop" aria-hidden="true">
+      <div class="orb orb-a"></div>
+      <div class="orb orb-b"></div>
+      <div class="orb orb-c"></div>
+      <div class="grain"></div>
+    </div>
+
+    <header class="titlebar" data-tauri-drag-region>
+      <div class="brand" data-tauri-drag-region>
+        <img src="/icon.png" alt="" class="brand-icon" />
+        <span class="brand-copy" data-tauri-drag-region>
+          <strong class="brand-name" data-tauri-drag-region>MORPH WRLD</strong>
+          <small data-tauri-drag-region>RIFT VAULT</small>
+        </span>
+      </div>
+      <div class="mode-switch" role="tablist">
+        <button role="tab" data-platform="riot" class="mode-btn platform-btn" aria-haspopup="menu" aria-expanded="false">
+          <span>RIOT</span><span data-icon="chevron-down"></span>
+        </button>
+        <button role="tab" data-platform="steam" class="mode-btn platform-btn" aria-haspopup="menu" aria-expanded="false">
+          <span>STEAM</span><span data-icon="chevron-down"></span>
+        </button>
+        <button role="tab" data-platform="others" class="mode-btn platform-btn" aria-haspopup="menu" aria-expanded="false">
+          <span>OTHERS</span><span data-icon="chevron-down"></span>
+        </button>
+        <div class="platform-menu riot-game-menu" id="riot-game-menu" data-menu="riot" role="menu" hidden>
+          <button role="menuitem" data-riot-game="lol"><span class="game-choice-icon league-choice">L</span><span><strong>League of Legends</strong><small>Ranked Solo / Duo</small></span></button>
+          <button role="menuitem" data-riot-game="tft"><span class="game-choice-icon tft-choice">T</span><span><strong>Teamfight Tactics</strong><small>Ranked TFT</small></span></button>
+          <button role="menuitem" data-riot-game="valorant"><span class="game-choice-icon valorant-choice">V</span><span><strong>VALORANT</strong><small>Launch with this Riot account</small></span></button>
+        </div>
+        <div class="platform-menu steam-platform-menu" id="steam-platform-menu" data-menu="steam" role="menu" hidden>
+          <button role="menuitem" data-steam-platform><span class="game-choice-icon steam-choice">S</span><span><strong>Steam</strong><small>PC game library and community</small></span></button>
+        </div>
+        <div class="platform-menu others-platform-menu" id="others-platform-menu" data-menu="others" role="menu" hidden>
+          <button role="menuitem" data-other-platform="epic"><span class="game-choice-icon epic-choice">E</span><span><strong>Epic Games</strong><small>Epic Games Launcher accounts</small></span></button>
+          <button role="menuitem" data-other-platform="ea"><span class="game-choice-icon ea-choice">EA</span><span><strong>EA app / Origin</strong><small>Electronic Arts accounts</small></span></button>
+        </div>
+      </div>
+      <div class="window-controls">
+        <button class="lang-btn" id="lang" data-i18n-title="lang.label" data-i18n-aria="lang.label">
+          <span data-icon="languages"></span>
+        </button>
+        <button class="win-btn" data-win="minimize" data-i18n-title="win.minimize" data-i18n-aria="win.minimize"></button>
+        <button class="win-btn" data-win="maximize" data-i18n-title="win.maximize" data-i18n-aria="win.maximize"></button>
+        <button class="win-btn win-close" data-win="close" data-i18n-title="win.close" data-i18n-aria="win.close"></button>
+      </div>
+    </header>
+
+    <div class="shell">
+      <aside class="sidebar">
+        <nav class="rail-nav" aria-label="Primary navigation">
+          <button class="side-link rail-active"><span data-icon="users"></span><span>Accounts</span></button>
+          <button class="side-link" data-action="add"><span data-icon="plus"></span><span>Add</span></button>
+          <button class="side-link" data-action="import"><span data-icon="download"></span><span data-i18n="side.import"></span></button>
+          <button class="side-link" data-action="export"><span data-icon="upload"></span><span data-i18n="side.export"></span></button>
+        </nav>
+
+        <section class="side-section utility-hidden" aria-hidden="true">
+          <h3 class="side-title" data-i18n="side.distribution"></h3>
+          <div id="distribution" class="distribution"></div>
+        </section>
+
+        <button class="schedule utility-hidden" id="schedule" data-i18n-title="refresh.idle" data-i18n-aria="refresh.idle" tabindex="-1">
+          <span class="schedule-ring"><span data-icon="refresh-cw"></span></span>
+          <span class="schedule-body">
+            <span class="schedule-label" data-i18n="schedule.label"></span>
+            <span class="schedule-text"></span>
+          </span>
+        </button>
+
+        <section class="side-section side-bottom rail-nav">
+          <button class="side-link" data-action="logs"><span data-icon="folder-open"></span> <span data-i18n="side.logs"></span></button>
+          <button class="side-link" data-action="settings"><span data-icon="settings"></span> <span data-i18n="side.settings"></span></button>
+          <button class="side-link" data-action="info"><span data-icon="info"></span> <span>Info</span></button>
+          <button class="side-link" data-action="shortcuts"><span data-icon="keyboard"></span> <span data-i18n="side.shortcuts"></span></button>
+          <div class="version" id="version"></div>
+        </section>
+      </aside>
+
+      <main class="main" data-i18n-aria="page.title">
+        <section class="vault-hero">
+          <div class="vault-heading">
+            <h1 id="vault-title">Rift Vault</h1>
+            <p id="vault-subtitle">Local account manager</p>
+          </div>
+          <div class="vault-overview" aria-label="Vault overview">
+            <div class="overview-stat">
+              <strong id="vault-visible">0</strong>
+              <span><b>IDENTITIES</b><small><i id="vault-total">0</i> stored locally</small></span>
+            </div>
+            <div class="overview-divider"></div>
+            <div class="overview-status">
+              <span class="local-dot" aria-hidden="true"></span>
+              <span><b id="vault-mode">LEAGUE</b><small>Local only</small></span>
+            </div>
+          </div>
+          <button class="btn btn-primary hero-add" id="open-add"><span data-icon="plus"></span><span data-i18n="side.add"></span></button>
+        </section>
+
+        <div class="toolbar">
+          <label class="search">
+            <span data-icon="search"></span>
+            <input id="search" type="text" data-i18n-ph="toolbar.search" autocomplete="off" spellcheck="false" />
+            <kbd>Ctrl F</kbd>
+          </label>
+          <div class="select-wrap" id="region-wrap">
+            <select id="region-filter" data-i18n-aria="sort.region"></select>
+          </div>
+          <div class="select-wrap" id="friend-wrap" data-i18n-title="toolbar.friendTitle">
+            <span class="select-label" data-i18n="toolbar.friend"></span>
+            <select id="friend-tier" data-i18n-aria="toolbar.friend"></select>
+            <select id="friend-division" data-i18n-aria="toolbar.friend"></select>
+          </div>
+          <div class="select-wrap" id="sort-wrap">
+            <span class="select-label" data-i18n="toolbar.sort"></span>
+            <select id="sort" data-i18n-aria="toolbar.sort">
+              <option value="rank" data-i18n="sort.rank"></option>
+              <option value="name" data-i18n="sort.name"></option>
+              <option value="level" data-i18n="sort.level"></option>
+              <option value="region" data-i18n="sort.region"></option>
+            </select>
+          </div>
+          <div class="view-toggle" role="tablist">
+            <button data-view="grid" data-i18n-title="view.grid"><span data-icon="layout-grid"></span></button>
+            <button data-view="list" data-i18n-title="view.list"><span data-icon="list"></span></button>
+          </div>
+        </div>
+
+        <div class="account-table-head" aria-hidden="true">
+          <span id="head-account">Account</span><span id="head-region">Region</span><span id="head-id">Account ID</span><span id="head-rank">Rank</span><span id="head-lp">LP</span><span>Action</span>
+        </div>
+        <div id="accounts" class="accounts grid"></div>
+        <div id="empty" class="empty" hidden></div>
+      </main>
+    </div>
+
+    <div id="drawer-root"></div>
+    <div id="modal-root"></div>
+    <div id="menu-root"></div>
+    <div id="toasts" class="toasts" aria-live="polite"></div>
+
+    <svg width="0" height="0" style="position: absolute" aria-hidden="true">
+      <defs id="emblem-defs"></defs>
+    </svg>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
