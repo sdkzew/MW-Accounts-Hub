@@ -38,7 +38,14 @@ One-click access, current Riot ranks, separate platform vaults, and passwords ke
     <td width="50%"><img src="docs/screenshots/valorant.png" alt="VALORANT account vault" /><br /><sub><b>VALORANT view:</b> launch the selected Riot account into VALORANT.</sub></td>
   </tr>
   <tr>
+    <td colspan="2"><img src="docs/screenshots/others-menu.png" alt="Other platform chooser" /><br /><sub><b>Platform chooser:</b> select Epic Games or EA app / Origin before changing vaults.</sub></td>
+  </tr>
+  <tr>
     <td colspan="2"><img src="docs/screenshots/steam.png" alt="Steam account vault" /><br /><sub><b>Steam Vault:</b> locally stored Steam accounts with one-click client switching.</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/epic.png" alt="Epic Games account vault" /><br /><sub><b>Epic Games Vault:</b> local credentials with secure copy and launcher access.</sub></td>
+    <td width="50%"><img src="docs/screenshots/ea.png" alt="EA app and Origin account vault" /><br /><sub><b>EA app / Origin Vault:</b> a separate account list for EA identities.</sub></td>
   </tr>
   <tr>
     <td width="50%"><img src="docs/screenshots/login.gif" alt="Step-by-step login progress" /><br /><sub><b>Login, step by step:</b> opening the Riot Client, entering credentials, launching the game.</sub></td>
