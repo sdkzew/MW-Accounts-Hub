@@ -3,7 +3,7 @@ members = ["src-tauri"]
 
 [package]
 name = "leagueaccounts"
-version = "1.0.0"
+version = "1.1.0"
 edition = "2021"
 description = "MORPH WRLD personal Riot and Steam account vault for Windows"
 license = "MIT"

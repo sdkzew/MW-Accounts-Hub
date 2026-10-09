@@ -1,6 +1,6 @@
 // Development-only stand-in for the Tauri backend, used when the UI is opened
 // in a plain browser (`npm run dev`). Never bundled into release builds.
-import { api, events, keyId, parseAccountLine, type AccountView, type Key, type NewAccount, type NewOtherAccount, type NewSteamAccount, type OtherAccountView, type RefreshDone, type RiotGame, type SteamAccountView } from "./api";
+import { api, events, keyId, parseAccountLine, type AccountView, type Key, type NewAccount, type NewOtherAccount, type NewSteamAccount, type OtherAccountView, type RecentGame, type RefreshDone, type RiotGame, type SteamAccountView } from "./api";
 
 const lol = (tier: string, division: string, lp: string, finished = "Gold II", reached = finished) => ({
   tier,
@@ -51,6 +51,25 @@ const otherSample: OtherAccountView[] = [
   { platform: "ea", username: "vault@example.com", displayName: "Vault EA", description: "EA Play", hasPassword: true },
 ];
 
+const recentGameSample = (): RecentGame[] => [
+  ["Ahri", "WIN", "SOLORANKED", 11, 2, 9, 226, 8.4, 42],
+  ["Jinx", "LOSE", "SOLORANKED", 6, 7, 5, 198, 5.1, 96],
+  ["Lux", "WIN", "ARAM", 13, 5, 22, 61, 7.8, 190],
+  ["Kai'Sa", "WIN", "FLEXRANKED", 9, 4, 10, 243, 7.2, 410],
+  ["Orianna", "LOSE", "SOLORANKED", 4, 6, 8, 211, 5.6, 890],
+].map(([champion, result, queueType, kills, deaths, assists, cs, opScore, minutes], index) => ({
+  matchId: `demo-match-${index + 1}`,
+  champion: champion as string,
+  result: result as string,
+  queueType: queueType as string,
+  kills: kills as number,
+  deaths: deaths as number,
+  assists: assists as number,
+  cs: cs as number,
+  opScore: opScore as number,
+  playedAt: new Date(Date.now() - (minutes as number) * 60_000).toISOString(),
+}));
+
 type Handler<T> = (payload: T) => void;
 const listeners = {
   step: [] as Handler<string>[],
@@ -99,7 +118,7 @@ export function installMock(): void {
       steamClientFound: true,
       otherAccounts,
       regions: ["EUW", "EUNE", "NA", "KR", "TR", "BR"],
-      version: "1.0.0",
+      version: "1.1.0",
       loggingAvailable: true,
       loadError: null,
       settings,
@@ -118,7 +137,7 @@ export function installMock(): void {
     cancelLogin: async () => {},
     gameStatus: async () => ({ clientOpen: false, inGame: false, sameAccount: false }),
     checkUpdate: async () => ({
-      current: "1.0.0",
+      current: "1.1.0",
       newer: true,
       latest: { version: "1.1.0", name: "v1.1.0", url: "https://github.com/", notes: "", publishedAt: "" },
     }),
@@ -178,6 +197,10 @@ export function installMock(): void {
     },
     copyAccountId: async () => {},
     copyPassword: async () => 30,
+    recentGames: async () => {
+      await wait(550);
+      return recentGameSample();
+    },
     exportData: async () => "C:\\Users\\demo\\credentials.json",
     importData: async () => null,
     openProfile: async () => {},

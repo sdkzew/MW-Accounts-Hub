@@ -3,6 +3,7 @@ use crate::models::{Account, RankInfo, TftRank};
 use html_escape::decode_html_entities;
 use regex::Regex;
 use scraper::{Html, Selector};
+use serde::Serialize;
 use std::time::Duration;
 
 /// Provider abstraction used by the manager and by deterministic tests.
@@ -13,6 +14,22 @@ pub trait RankProvider: Send + Sync {
 #[derive(Clone, Default)]
 pub struct RankFetcher {
     client: reqwest::blocking::Client,
+}
+
+/// One public League match exposed in OP.GG's structured profile data.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RecentGame {
+    pub match_id: String,
+    pub queue_type: String,
+    pub champion: String,
+    pub result: String,
+    pub kills: i64,
+    pub deaths: i64,
+    pub assists: i64,
+    pub cs: i64,
+    pub op_score: Option<f64>,
+    pub played_at: String,
 }
 
 impl RankFetcher {
@@ -38,6 +55,99 @@ impl RankFetcher {
         let url = self.build_opgg_url(&account.region, &account.name);
         let tft_url = self.build_opgg_tft_url(&account.region, &account.name);
         self.fetch_profiles(&url, &tft_url)
+    }
+
+    /// Fetch recent League matches only when the UI expands an account row.
+    /// OP.GG publishes this data as schema.org JSON-LD in the profile page,
+    /// which is less coupled to their private web API than client endpoints.
+    pub fn fetch_recent_games(&self, account: &Account) -> Result<Vec<RecentGame>, ()> {
+        if account.name.trim().is_empty() {
+            return Ok(Vec::new());
+        }
+        let url = self.build_opgg_url(&account.region, &account.name);
+        self.fetch_page(&url)
+            .map(|body| self.parse_recent_games_from_opgg(&body))
+            .inspect_err(|reason| logging::record(Event::RankFetchFailed, *reason))
+            .map_err(|_| ())
+    }
+
+    /// Parse the schema.org `ItemList` identified by `#recent-games`.
+    pub fn parse_recent_games_from_opgg(&self, body: &str) -> Vec<RecentGame> {
+        let soup = Html::parse_document(body);
+        let Ok(selector) = Selector::parse(r#"script[type="application/ld+json"]"#) else {
+            return Vec::new();
+        };
+
+        for script in soup.select(&selector) {
+            let Ok(payload) = serde_json::from_str::<serde_json::Value>(&script.inner_html()) else {
+                continue;
+            };
+            let Some(graph) = payload.get("@graph").and_then(serde_json::Value::as_array) else {
+                continue;
+            };
+            let Some(list) = graph.iter().find(|entry| {
+                entry
+                    .get("@id")
+                    .and_then(serde_json::Value::as_str)
+                    .is_some_and(|id| id.ends_with("#recent-games"))
+            }) else {
+                continue;
+            };
+            let Some(items) = list
+                .get("itemListElement")
+                .and_then(serde_json::Value::as_array)
+            else {
+                return Vec::new();
+            };
+
+            return items
+                .iter()
+                .filter_map(|entry| {
+                    let item = entry.get("item")?;
+                    let properties = item.get("additionalProperty")?.as_array()?;
+                    let property = |name: &str| {
+                        properties.iter().find_map(|property| {
+                            (property.get("name")?.as_str()? == name)
+                                .then(|| property.get("value"))
+                                .flatten()
+                        })
+                    };
+                    let string_value = |name: &str| {
+                        property(name)
+                            .and_then(serde_json::Value::as_str)
+                            .unwrap_or_default()
+                            .to_owned()
+                    };
+                    let integer_value = |name: &str| {
+                        property(name)
+                            .and_then(serde_json::Value::as_i64)
+                            .unwrap_or_default()
+                    };
+                    let champion = string_value("champion");
+                    if champion.is_empty() {
+                        return None;
+                    }
+                    Some(RecentGame {
+                        match_id: string_value("matchId"),
+                        queue_type: string_value("queueType"),
+                        champion,
+                        result: string_value("result"),
+                        kills: integer_value("kills"),
+                        deaths: integer_value("deaths"),
+                        assists: integer_value("assists"),
+                        cs: integer_value("cs"),
+                        op_score: property("opScore").and_then(serde_json::Value::as_f64),
+                        played_at: item
+                            .get("startTime")
+                            .and_then(serde_json::Value::as_str)
+                            .unwrap_or_default()
+                            .to_owned(),
+                    })
+                })
+                .take(10)
+                .collect();
+        }
+        Vec::new()
     }
 
     fn fetch_profiles(&self, lol_url: &str, tft_url: &str) -> RankInfo {
@@ -558,6 +668,55 @@ mod tests {
             }
         );
         assert_eq!(fetcher.parse_level_from_opgg(&soup, ""), "71");
+    }
+
+    #[test]
+    fn parses_recent_games_from_structured_profile_data() {
+        let html_doc = r#"
+        <html><head><script type="application/ld+json">{
+          "@context":"https://schema.org",
+          "@graph":[{
+            "@type":"ItemList",
+            "@id":"https://op.gg/lol/summoners/euw/Test-EUW#recent-games",
+            "itemListElement":[{
+              "@type":"ListItem",
+              "position":1,
+              "item":{
+                "@type":"PlayGameAction",
+                "startTime":"2026-10-08T12:34:56+02:00",
+                "additionalProperty":[
+                  {"name":"matchId","value":"match-123"},
+                  {"name":"queueType","value":"SOLORANKED"},
+                  {"name":"champion","value":"Ahri"},
+                  {"name":"result","value":"WIN"},
+                  {"name":"kills","value":9},
+                  {"name":"deaths","value":2},
+                  {"name":"assists","value":11},
+                  {"name":"cs","value":214},
+                  {"name":"opScore","value":8.7}
+                ]
+              }
+            }]
+          }]
+        }</script></head></html>
+        "#;
+        let games = RankFetcher::new().parse_recent_games_from_opgg(html_doc);
+        assert_eq!(games.len(), 1);
+        assert_eq!(
+            games[0],
+            RecentGame {
+                match_id: "match-123".into(),
+                queue_type: "SOLORANKED".into(),
+                champion: "Ahri".into(),
+                result: "WIN".into(),
+                kills: 9,
+                deaths: 2,
+                assists: 11,
+                cs: 214,
+                op_score: Some(8.7),
+                played_at: "2026-10-08T12:34:56+02:00".into(),
+            }
+        );
     }
 
     #[test]

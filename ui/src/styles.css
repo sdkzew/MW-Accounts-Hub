@@ -3014,7 +3014,7 @@ button {
 .card,
 .accounts.list .card {
   display: grid;
-  grid-template-columns: minmax(235px, 2fr) 76px minmax(105px, 0.8fr) minmax(170px, 1.2fr) 82px 124px;
+  grid-template-columns: minmax(235px, 2fr) 76px minmax(105px, 0.8fr) minmax(170px, 1.2fr) 82px 158px;
   column-gap: 14px;
   align-items: center;
 }
@@ -3203,6 +3203,190 @@ button {
   height: 34px !important;
   opacity: 0.55;
   border: 0 !important;
+}
+.recent-toggle {
+  width: 28px !important;
+  height: 34px !important;
+  flex: 0 0 28px;
+  color: #8d8596;
+  border: 0 !important;
+}
+.recent-toggle svg {
+  transition: transform 180ms ease, color 180ms ease;
+}
+.recent-toggle:hover,
+.card.expanded .recent-toggle {
+  color: #b694ff;
+  background: rgba(139, 92, 246, 0.1);
+}
+.card.expanded .recent-toggle svg {
+  transform: rotate(180deg);
+}
+.recent-games-panel {
+  grid-column: 1 / -1;
+  min-width: 0;
+  margin: 12px -17px -12px;
+  padding: 11px 17px 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 0 0 8px 8px;
+  background: #0a0a0f;
+  animation: recent-panel-in 180ms ease both;
+}
+.recent-games-panel > header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+.recent-games-panel > header strong {
+  color: #d9d3df;
+  font-size: 10.5px;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.recent-games-panel > header span {
+  color: #67606e;
+  font-size: 9.5px;
+}
+.recent-games-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.recent-game {
+  display: grid;
+  grid-template-columns: 52px minmax(120px, 1fr) 110px 105px 48px 48px 82px;
+  align-items: center;
+  gap: 12px;
+  min-height: 38px;
+  padding: 5px 10px 5px 8px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-left: 2px solid rgba(239, 68, 68, 0.58);
+  border-radius: 6px;
+  background: rgba(239, 68, 68, 0.035);
+}
+.recent-game.win {
+  border-left-color: rgba(62, 208, 143, 0.7);
+  background: rgba(62, 208, 143, 0.035);
+}
+.recent-result {
+  color: #e27c86;
+  font-size: 9px;
+  font-weight: 750;
+  letter-spacing: 0.08em;
+}
+.recent-game.win .recent-result { color: #5bd5a0; }
+.recent-champion {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.recent-champion-mark {
+  position: relative;
+  display: grid;
+  width: 25px;
+  height: 25px;
+  flex: 0 0 25px;
+  place-items: center;
+  border: 1px solid rgba(139, 92, 246, 0.28);
+  border-radius: 50%;
+  color: #c9b6f8;
+  background: rgba(139, 92, 246, 0.1);
+  font-size: 9px;
+  font-style: normal;
+  font-weight: 700;
+  overflow: hidden;
+}
+.recent-champion-mark > span {
+  grid-area: 1 / 1;
+  place-self: center;
+}
+.recent-champion-image {
+  grid-area: 1 / 1;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.recent-champion b,
+.recent-kda b,
+.recent-stat b {
+  color: #c9c3cf;
+  font-size: 10.5px;
+  font-weight: 600;
+}
+.recent-champion b {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.recent-queue,
+.recent-game time {
+  color: #77707e;
+  font-size: 9.5px;
+}
+.recent-game time { text-align: right; }
+.recent-kda,
+.recent-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  font-variant-numeric: tabular-nums;
+}
+.recent-kda small,
+.recent-stat small {
+  color: #5d5763;
+  font-size: 7.5px;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+}
+.recent-games-empty {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 58px;
+}
+.recent-games-empty > div {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #8b5cf6;
+}
+.recent-games-empty span {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.recent-games-empty strong { color: #bbb4c2; font-size: 10.5px; }
+.recent-games-empty small { color: #706978; font-size: 9.5px; }
+.recent-games-empty button {
+  padding: 6px 10px;
+  border: 1px solid rgba(139, 92, 246, 0.28);
+  border-radius: 5px;
+  color: #bfa6fa;
+  background: rgba(139, 92, 246, 0.08);
+  cursor: pointer;
+  font-size: 9.5px;
+}
+.recent-games-loading {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.recent-games-loading i {
+  height: 38px;
+  border-radius: 6px;
+  background: linear-gradient(90deg, rgba(255,255,255,.025), rgba(255,255,255,.07), rgba(255,255,255,.025));
+  background-size: 220% 100%;
+  animation: recent-loading 1.2s linear infinite;
+}
+@keyframes recent-panel-in {
+  from { opacity: 0; transform: translateY(-5px); }
+}
+@keyframes recent-loading {
+  to { background-position: -220% 0; }
 }
 .desc {
   display: none;
@@ -3556,12 +3740,15 @@ button {
   .account-table-head,
   .card,
   .accounts.list .card {
-    grid-template-columns: minmax(200px, 1.7fr) 62px minmax(90px, 0.7fr) minmax(145px, 1.1fr) 68px 108px;
+    grid-template-columns: minmax(200px, 1.7fr) 62px minmax(90px, 0.7fr) minmax(145px, 1.1fr) 68px 142px;
     column-gap: 10px;
   }
   .account-table-head { padding-inline: 14px; }
   .card,
   .accounts.list .card { padding-inline: 14px; }
+  .recent-games-panel { margin-inline: -14px; padding-inline: 14px; }
+  .recent-game { grid-template-columns: 48px minmax(100px, 1fr) 90px 100px 42px 72px; }
+  .recent-stat:last-of-type { display: none; }
 }
 
 /* Branded launch sequence */

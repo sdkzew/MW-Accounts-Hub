@@ -15,7 +15,7 @@ use leagueaccounts::autotype::auto_type_credentials;
 use leagueaccounts::credentials;
 use leagueaccounts::logging::{self, Event, Reason};
 use leagueaccounts::models::{normalize_account_games, Account, AccountKey, RankInfo};
-use leagueaccounts::rank_fetcher::{RankFetcher, RankProvider};
+use leagueaccounts::rank_fetcher::{RankFetcher, RankProvider, RecentGame};
 use leagueaccounts::riot_client::{self, Game, LoginError, LoginOutcome, LoginStep};
 use leagueaccounts::utils::{app_data_dir, parse_account_line, region_from_display, settings_file, REGION_MAP};
 use leagueaccounts::AccountManager;
@@ -650,6 +650,19 @@ async fn import_data(state: AppState<'_>, title: String) -> CommandResult<Option
     Ok(Some(BatchResult { added, skipped }))
 }
 
+/// Load public League match history when an account row is expanded.
+#[tauri::command]
+async fn recent_games(state: AppState<'_>, key: Key) -> CommandResult<Vec<RecentGame>> {
+    let account = find_account(&state, key)?;
+    if account.name.trim().is_empty() {
+        return Err(fail("riot_id_missing"));
+    }
+    tauri::async_runtime::spawn_blocking(move || RankFetcher::new().fetch_recent_games(&account))
+        .await
+        .map_err(|_| fail("recent_games_unavailable"))?
+        .map_err(|_| fail("recent_games_unavailable"))
+}
+
 /// Open the account's OP.GG page (LoL or TFT) in the default browser.
 #[tauri::command]
 fn open_profile(state: AppState<'_>, key: Key, tft: bool) -> CommandResult<()> {
@@ -804,6 +817,7 @@ fn main() {
             game_status,
             export_data,
             import_data,
+            recent_games,
             open_profile,
             check_update,
             open_release,

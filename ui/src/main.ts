@@ -3,7 +3,7 @@ import "./styles.css";
 import "./features.css";
 import "./login.css";
 
-import { ApiError, accountLabel, api, events, keyId, keyOf, parseAccountLine, type AccountView, type Key, type OtherAccountView, type OtherPlatform, type Release, type RiotGame, type Schedule, type Settings, type SteamAccountView } from "./api";
+import { ApiError, accountLabel, api, events, keyId, keyOf, parseAccountLine, type AccountView, type Key, type OtherAccountView, type OtherPlatform, type RecentGame, type Release, type RiotGame, type Schedule, type Settings, type SteamAccountView } from "./api";
 import { openLoginOverlay, type LoginOverlay } from "./login";
 import { LANGUAGES, applyStatic, errorText, lang, localizeRank, setLang, t, tierName, type Lang, type MessageKey } from "./i18n";
 import { $, closeMenu, contextMenu, esc, fragment, leave, modal, reducedMotion, toast } from "./dom";
@@ -41,6 +41,10 @@ async function finishLaunch(): Promise<void> {
 type View = "grid" | "list";
 type Sort = "rank" | "name" | "level" | "region";
 type Vault = "riot" | "steam" | "others";
+type RecentGamesState =
+  | { status: "loading"; games: RecentGame[] }
+  | { status: "ready"; games: RecentGame[] }
+  | { status: "error"; games: RecentGame[] };
 
 const state = {
   accounts: [] as AccountView[],
@@ -60,6 +64,8 @@ const state = {
   friendDivision: "I",
   tierFilter: null as string | null,
   selected: null as string | null,
+  expanded: new Set<string>(),
+  recentGames: new Map<string, RecentGamesState>(),
   pending: new Set<string>(),
   refreshing: false,
   refreshTotal: 0,
@@ -148,8 +154,8 @@ function historyLine(account: AccountView): string {
   return `<span>${t("card.lastSeason")}</span><b>${esc(localizeRank(reached))}</b>`;
 }
 
-function cardSignature(account: AccountView, pending: boolean): string {
-  return JSON.stringify([account, state.mode, state.riotGame, pending, lang()]);
+function cardSignature(account: AccountView, pending: boolean, id: string): string {
+  return JSON.stringify([account, state.mode, state.riotGame, pending, state.expanded.has(id), state.recentGames.get(id), lang()]);
 }
 
 function profileAvatar(account: AccountView): string {
@@ -161,7 +167,92 @@ function profileAvatar(account: AccountView): string {
   return `<span class="profile-avatar" aria-hidden="true"><span class="profile-avatar-fallback">${esc(fallback)}</span>${image}</span>`;
 }
 
-function cardInner(account: AccountView, pending: boolean): string {
+function queueLabel(queue: string): string {
+  const labels: Record<string, string> = {
+    SOLORANKED: "Ranked Solo",
+    FLEXRANKED: "Ranked Flex",
+    NORMAL: "Normal",
+    ARAM: "ARAM",
+    ARENA: "Arena",
+    URF: "URF",
+  };
+  return labels[queue] ?? queue.replaceAll("_", " ").toLowerCase().replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function relativePlayedAt(value: string): string {
+  const played = Date.parse(value);
+  if (!Number.isFinite(played)) return "Recently";
+  const minutes = Math.round((played - Date.now()) / 60_000);
+  const formatter = new Intl.RelativeTimeFormat(lang(), { numeric: "auto" });
+  if (Math.abs(minutes) < 60) return formatter.format(minutes, "minute");
+  const hours = Math.round(minutes / 60);
+  if (Math.abs(hours) < 24) return formatter.format(hours, "hour");
+  return formatter.format(Math.round(hours / 24), "day");
+}
+
+const DATA_DRAGON_VERSION = "16.20.1";
+
+function championAssetName(name: string): string {
+  const normalized = name.trim().toLowerCase();
+  const exceptions: Record<string, string> = {
+    "bel'veth": "Belveth",
+    "cho'gath": "Chogath",
+    "dr. mundo": "DrMundo",
+    "jarvan iv": "JarvanIV",
+    "kai'sa": "Kaisa",
+    "kha'zix": "Khazix",
+    "kog'maw": "KogMaw",
+    "k'sante": "KSante",
+    leblanc: "Leblanc",
+    "nunu & willump": "Nunu",
+    "rek'sai": "RekSai",
+    "renata glasc": "Renata",
+    "vel'koz": "Velkoz",
+    wukong: "MonkeyKing",
+  };
+  return exceptions[normalized] ?? name.replace(/[^A-Za-z0-9]/g, "");
+}
+
+function championImageUrl(name: string): string {
+  return `https://ddragon.leagueoflegends.com/cdn/${DATA_DRAGON_VERSION}/img/champion/${encodeURIComponent(championAssetName(name))}.png`;
+}
+
+function recentGamesPanel(account: AccountView, id: string): string {
+  if (!state.expanded.has(id)) return "";
+  if (!account.name || account.riotIdNotFound) {
+    const missing = !account.name;
+    return `<section class="recent-games-panel recent-games-empty"><div>${icon("info", 16)}<span><strong>${missing ? "Add" : "Update"} a Riot ID to see recent games</strong><small>Match history is loaded from the public OP.GG profile.</small></span></div><button data-act="edit">${missing ? "Add" : "Update"} Riot ID</button></section>`;
+  }
+  const recent = state.recentGames.get(id);
+  if (!recent || recent.status === "loading") {
+    return `<section class="recent-games-panel" aria-busy="true"><header><strong>Recent games</strong><span>Loading from OP.GG…</span></header><div class="recent-games-loading">${Array.from({ length: 3 }, () => "<i></i>").join("")}</div></section>`;
+  }
+  if (recent.status === "error") {
+    return `<section class="recent-games-panel recent-games-empty"><div>${icon("alert", 16)}<span><strong>Recent games are unavailable</strong><small>OP.GG may be delayed. Try again in a moment.</small></span></div><button data-act="retry-history">Try again</button></section>`;
+  }
+  if (!recent.games.length) {
+    return `<section class="recent-games-panel recent-games-empty"><div>${icon("info", 16)}<span><strong>No recent games found</strong><small>This OP.GG profile has no public League matches yet.</small></span></div></section>`;
+  }
+  return `<section class="recent-games-panel">
+    <header><strong>Recent games</strong><span>Latest ${Math.min(recent.games.length, 5)} · OP.GG</span></header>
+    <div class="recent-games-list">${recent.games.slice(0, 5).map((game) => {
+      const won = game.result.toUpperCase() === "WIN";
+      const result = won ? "WIN" : game.result.toUpperCase() === "LOSE" ? "LOSS" : game.result || "GAME";
+      const initial = game.champion.trim().charAt(0).toUpperCase() || "?";
+      return `<div class="recent-game ${won ? "win" : "loss"}">
+        <span class="recent-result">${esc(result)}</span>
+        <span class="recent-champion"><i class="recent-champion-mark" aria-hidden="true"><span>${esc(initial)}</span><img class="recent-champion-image" src="${esc(championImageUrl(game.champion))}" alt="" loading="lazy" decoding="async" /></i><b>${esc(game.champion)}</b></span>
+        <span class="recent-queue">${esc(queueLabel(game.queueType))}</span>
+        <span class="recent-kda"><b>${game.kills} / ${game.deaths} / ${game.assists}</b><small>KDA</small></span>
+        <span class="recent-stat"><b>${game.cs}</b><small>CS</small></span>
+        <span class="recent-stat"><b>${game.opScore == null ? "—" : game.opScore.toFixed(1)}</b><small>OP</small></span>
+        <time datetime="${esc(game.playedAt)}">${esc(relativePlayedAt(game.playedAt))}</time>
+      </div>`;
+    }).join("")}</div>
+  </section>`;
+}
+
+function cardInner(account: AccountView, pending: boolean, id: string): string {
   const rank = rankOf(account, state.mode);
   const tier = normalizeTier(rank.tier);
   const valorant = state.riotGame === "valorant";
@@ -198,14 +289,16 @@ function cardInner(account: AccountView, pending: boolean): string {
     <div class="lp-cell">${valorant ? '<span class="valorant-ready"><span class="local-dot"></span> Ready</span>' : lp || "—"}</div>
     <div class="card-actions">
       <button class="btn btn-play" data-act="login" title="${esc(t("card.loginTitle"))}">${esc(t("card.login"))}</button>
+      <button class="icon-btn recent-toggle" data-act="toggle-history" title="Recent games" aria-label="Recent games for ${esc(accountLabel(account))}" aria-expanded="${state.expanded.has(id)}">${icon("chevron-down")}</button>
       <button class="icon-btn card-more" data-act="menu" title="${esc(t("card.more"))}">${icon("more")}</button>
-    </div>`;
+    </div>
+    ${recentGamesPanel(account, id)}`;
 }
 
 function updateCard(element: HTMLElement, account: AccountView): void {
   const id = keyId(keyOf(account));
   const pending = state.pending.has(id);
-  const signature = cardSignature(account, pending);
+  const signature = cardSignature(account, pending, id);
   const colors = state.riotGame === "valorant"
     ? { base: "#ff4655", light: "#ff8993", dark: "#641d27" }
     : palette(rankOf(account, state.mode).tier);
@@ -215,12 +308,16 @@ function updateCard(element: HTMLElement, account: AccountView): void {
   element.classList.toggle("selected", state.selected === id);
   element.classList.toggle("apex", state.riotGame !== "valorant" && APEX.has(normalizeTier(rankOf(account, state.mode).tier)));
   element.classList.toggle("valorant-card", state.riotGame === "valorant");
+  element.classList.toggle("expanded", state.expanded.has(id));
   if (element.dataset.signature === signature) return;
   const wasPending = element.dataset.pending === "1";
   element.dataset.signature = signature;
   element.dataset.pending = pending ? "1" : "0";
-  element.innerHTML = cardInner(account, pending);
+  element.innerHTML = cardInner(account, pending, id);
   element.querySelectorAll<HTMLImageElement>(".profile-avatar-image").forEach((image) => {
+    image.addEventListener("error", () => image.remove(), { once: true });
+  });
+  element.querySelectorAll<HTMLImageElement>(".recent-champion-image").forEach((image) => {
     image.addEventListener("error", () => image.remove(), { once: true });
   });
   if (wasPending && !pending && !reducedMotion()) {
@@ -646,6 +743,38 @@ function select(id: string | null, focus = false): void {
   });
 }
 
+async function loadRecentGames(account: AccountView, force = false): Promise<void> {
+  const id = keyId(keyOf(account));
+  state.expanded.add(id);
+  const cached = state.recentGames.get(id);
+  if (!force && cached && cached.status !== "error") {
+    renderAccounts();
+    return;
+  }
+  if (!account.name || account.riotIdNotFound) {
+    renderAccounts();
+    return;
+  }
+  state.recentGames.set(id, { status: "loading", games: [] });
+  renderAccounts();
+  try {
+    const games = await api.recentGames(keyOf(account));
+    state.recentGames.set(id, { status: "ready", games });
+  } catch {
+    state.recentGames.set(id, { status: "error", games: [] });
+  }
+  renderAccounts();
+}
+
+function toggleRecentGames(account: AccountView): void {
+  const id = keyId(keyOf(account));
+  if (state.expanded.delete(id)) {
+    renderAccounts();
+    return;
+  }
+  void loadRecentGames(account);
+}
+
 const RIOT_GAME_OPTIONS: { id: RiotGame; mark: string; name: string; detail: string }[] = [
   { id: "lol", mark: "L", name: "League", detail: "League of Legends" },
   { id: "tft", mark: "T", name: "TFT", detail: "Teamfight Tactics" },
@@ -696,6 +825,7 @@ async function editAccount(account: AccountView): Promise<void> {
       }
       const updated = await guard(() => api.updateAccount(keyOf(account), name, description, games), "toast.saveFailed");
       if (!updated) return false;
+      state.recentGames.delete(keyId(keyOf(account)));
       upsert(updated);
       render();
       toast("success", t("toast.updated"));
@@ -724,6 +854,8 @@ async function deleteAccount(account: AccountView): Promise<void> {
   const element = document.querySelector<HTMLElement>(`#accounts > .card[data-key="${CSS.escape(id)}"]`);
   if (element) await leave(element, "card-out");
   state.accounts = state.accounts.filter((candidate) => keyId(keyOf(candidate)) !== id);
+  state.expanded.delete(id);
+  state.recentGames.delete(id);
   if (state.selected === id) state.selected = null;
   render();
   toast("success", t("toast.deleted"), accountLabel(account));
@@ -1524,7 +1656,7 @@ function openInfo(): void {
         </div>
         <footer class="info-foot">
           <button class="btn info-shortcuts" type="button" data-info-shortcuts>${icon("keyboard", 16)} Keyboard shortcuts</button>
-          <span>Version 1.0.0</span>
+          <span>Version 1.1.0</span>
         </footer>
       </aside>
     </div>`);
@@ -1726,6 +1858,8 @@ function wire(): void {
     select(card.dataset.key ?? null);
     const action = (event.target as HTMLElement).closest<HTMLElement>("[data-act]")?.dataset.act;
     if (action === "login") void login(account);
+    if (action === "toggle-history") toggleRecentGames(account);
+    if (action === "retry-history") void loadRecentGames(account, true);
     if (action === "copy-id") void copyId(account);
     if (action === "copy-pass") void copyPassword(account);
     if (action === "menu") {

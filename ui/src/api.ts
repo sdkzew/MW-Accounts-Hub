@@ -95,6 +95,19 @@ export interface AccountView {
   tft: TftRank;
 }
 
+export interface RecentGame {
+  matchId: string;
+  queueType: string;
+  champion: string;
+  result: string;
+  kills: number;
+  deaths: number;
+  assists: number;
+  cs: number;
+  opScore: number | null;
+  playedAt: string;
+}
+
 export interface SteamAccountView {
   username: string;
   displayName: string;
@@ -237,6 +250,7 @@ export const api = {
   updateSettings: (input: SettingsInput) => call<Settings>("update_settings", { input }),
   exportData: (title: string) => call<string | null>("export_data", { title }),
   importData: (title: string) => call<BatchResult | null>("import_data", { title }),
+  recentGames: (key: Key) => call<RecentGame[]>("recent_games", { key }),
   openProfile: (key: Key, tft: boolean) => call<void>("open_profile", { key, tft }),
   openLogsFolder: () => call<void>("open_logs_folder"),
   listSteamAccounts: () => call<SteamAccountView[]>("list_steam_accounts"),
